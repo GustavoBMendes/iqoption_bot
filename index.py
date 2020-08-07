@@ -30,7 +30,7 @@ def timestamp_converter(x):
 def banca():
 	return API.get_balance()
 
-def capturarVelas(par, tempo_vela, num_velas):
+def capturarVelas(par, tempo_vela, num_velas): #tempo em segundos
 	hora = time.time()
 	if(num_velas <= 1000):
 		velas = API.get_candles(par, tempo_vela, num_velas, hora)
@@ -62,6 +62,38 @@ def capturarVelas_realTime(par, tempo_vela):
 		time.sleep(1)
 	API.stop_candles_stream(par, tempo_vela)
 
-capturarVelas('EURGBP', 300, 2)
+def payout(par, tipo, timeframe = 1): #tipo = DIGITAL/BINARY; timeframe = tempo de expiração da vela
+	
+	if tipo == 'binary':
+		a = API.get_all_profit()
+		return int(100 * a[par]['binary'])
 
-capturarVelas_realTime('EURUSD-OTC', 60)
+	elif tipo == 'digital':
+		try:
+			API.subscribe_strike_list(par, timeframe)
+			while True:
+				d = API.get_digital_current_profit(par, timeframe)
+				if d != False:
+					d = int(d)
+					break
+				time.sleep(1)
+			API.unsubscribe_strike_list(par, timeframe)
+			return d
+
+		except:
+			print('Ativo não existe')
+			return False
+		
+par = API.get_all_open_time()
+
+for paridade in par['binary']:
+	
+	if par['binary'][paridade]['open'] == True:
+		print('[ BINARY ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'binary')))
+
+print('\n')
+
+for paridade in par['digital']:
+	
+	if par['digital'][paridade]['open'] == True:
+		print('[ DIGITAL ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'digital')))
