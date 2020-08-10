@@ -2,6 +2,7 @@ import time, json
 from iqoptionapi.stable_api import IQ_Option
 from datetime import datetime
 from dateutil import tz
+import PySimpleGUI as sg
 
 API = IQ_Option('email', 'password')
 API.connect()
@@ -83,7 +84,24 @@ def payout(par, tipo, timeframe = 1): #tipo = DIGITAL/BINARY; timeframe = tempo 
 		except:
 			print('Ativo não existe')
 			return False
-		
+
+class TelaPython:
+	def __init__(self):
+
+		layout=[
+			[sg.Text('Nome'), sg.Input()],
+			[sg.Text(banca()), sg.Input()],
+			[sg.Button('Enviar')]
+		]
+
+		janela=sg.Window('Dados do usuário').layout(layout)
+
+		self.button, self.values = janela.Read()
+
+	def Iniciar(self):
+		print(self.values)
+
+'''
 par = API.get_all_open_time()
 
 for paridade in par['binary']:
@@ -97,3 +115,6 @@ for paridade in par['digital']:
 	
 	if par['digital'][paridade]['open'] == True:
 		print('[ DIGITAL ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'digital')))
+'''
+tela = TelaPython()
+tela.Iniciar()
