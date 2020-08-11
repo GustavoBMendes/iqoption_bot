@@ -1,21 +1,27 @@
-import time, json, sys
+import time, json, sys, logging
 from iqoptionapi.stable_api import IQ_Option
 from datetime import datetime
 from dateutil import tz
 import PySimpleGUI as sg
 
-API = IQ_Option('email', 'password')
-API.connect()
+#desabilitar mensagens de erro
+#logging.disable(level=(logging.ERROR))
 
-API.change_balance('PRACTICE') #PRACTICE / REAL
-print('Tipo de conta: ', API.get_balance_mode())
 
-if(API.check_connect() == False):
-	print('Erro ao se conectar. Verifique se seu e-mail ou senha estão corretos.')
+def login(email, senha):
+	API = IQ_Option(email, senha)
+	API.connect()
 
-else:
-	print('Conectado com sucesso')
+	#API.change_balance('PRACTICE') #PRACTICE / REAL
+	#print('Tipo de conta: ', API.get_balance_mode())
 
+	if(API.check_connect() == False):
+		print(f'Erro ao se conectar. Verifique se seu e-mail ou senha estão corretos.')
+
+	else:
+		print(f'Conectado com sucesso')
+
+	return API
 
 def perfil():
 	perfil = json.loads(json.dumps(API.get_profile()))
@@ -149,30 +155,32 @@ def fazer_entrada(valor, par, tipo, timeframe):
 	status, id = API.buy(valor, par, tipo, timeframe)
 
 	if status:
-		resultado, lucro = API.check_win_v3(id)
+		resultado, lucro = API.check_win_v4(id)
 		print('RESULTADO: ' + resultado + ' / LUCRO = ' + str(round(lucro, 2)))
 
 class TelaPython:
 	def __init__(self):
-		x = perfil()
 		
 		layout=[
-			[sg.Text(x['name']), sg.Input()],
-			[sg.Text(banca()), sg.Input()],
-			[sg.Button('Enviar')],
-			
+			[sg.Text('E-mail: '), sg.Input()],
+			[sg.Text('Senha: '), sg.Input()],
+			[sg.Button('Login')],
+			[sg.Output()]
 		]
 
-		janela=sg.Window('Dados do usuário').layout(layout)
+		self.janela=sg.Window('Dados do usuário').layout(layout)
 
-		self.button, self.values = janela.Read()
 
 	def Iniciar(self):
-		#par = API.get_all_open_time()
-		print(self.values)
+		while True:
+			self.button, self.values = self.janela.Read()
+			API = login(self.values[0], self.values[1])
+			#par = API.get_all_open_time()
+			print(f'{self.values[0]}')
+			print(f'{self.values[1]}')
 
 
-#fazer_entrada(2, 'USDCAD', 'call', 1)
+#fazer_entrada(2, 'AUDJPY', 'call', 1)
 
-#tela = TelaPython()
-#tela.Iniciar()
+tela = TelaPython()
+tela.Iniciar()

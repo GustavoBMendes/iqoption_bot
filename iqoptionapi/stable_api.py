@@ -26,8 +26,8 @@ class IQ_Option:
     def __init__(self, email, password):
         self.size = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800,
                      3600, 7200, 14400, 28800, 43200, 86400, 604800, 2592000]
-        self.email = 'mendes-gustavo@live.com'
-        self.password = '6600653g'
+        self.email = email
+        self.password = password
         self.suspend = 0.5
         self.thread = None
         self.subscribe_candle = []
@@ -699,6 +699,17 @@ class IQ_Option:
 
         return self.get_async_order(id_number)["option-closed"]["msg"]["profit_amount"] - \
                self.get_async_order(id_number)["option-closed"]["msg"]["amount"]
+
+    def check_win_v4(self, id_number):
+        while True:
+            result = self.get_optioninfo_v2(10)
+            if result['msg']['closed_options'][0]['id'][0] == id_number and result['msg']['closed_options'][0]['id'][0] != None:			
+                    return result['msg']['closed_options'][0]['win'],(result['msg']['closed_options'][0]['win_amount']-result['msg']['closed_options'][0]['amount'] if result['msg']['closed_options'][0]['win'] != 'equal' else 0)
+                    break
+            time.sleep(1)  
+
+    # Function by Adenilson ( https://t.me/CardosoSlv )
+    # Function only work with Options!
 
     # -------------------get infomation only for binary option------------------------
 
