@@ -85,13 +85,43 @@ def payout(par, tipo, timeframe = 1): #tipo = DIGITAL/BINARY; timeframe = tempo 
 			print('Ativo não existe')
 			return False
 
+def paridades():
+	par = API.get_all_open_time()
+
+	for paridade in par['binary']:
+		
+		if par['binary'][paridade]['open'] == True:
+			print('[ BINARY ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'binary')))
+
+	print('\n')
+
+	for paridade in par['digital']:
+		
+		if par['digital'][paridade]['open'] == True:
+			print('[ DIGITAL ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'digital')))
+
+def historico():
+	status,historico = API.get_position_history_v2('turbo-option', 7, 0, 0, 0)
+
+	''' exibir dados em formato json
+	for x in historico['positions']:
+		print(json.dumps(x, indent=1))
+	'''
+
+	for x in historico['positions']:
+		print('PAR: '+str(x['raw_event']['active'])+' /  DIRECAO: '+str(x['raw_event']['direction'])+' / VALOR: '+str(x['invest']))
+		print('LUCRO: '+str(x['close_profit'] if x['close_profit'] == 0 else round(x['close_profit']-x['invest'], 2) ) + ' | INICIO OP: '+str(timestamp_converter(x['open_time'] / 1000))+' / FIM OP: '+str(timestamp_converter(x['close_time'] / 1000)))
+		print('\n')
+
 class TelaPython:
 	def __init__(self):
-
+		x = perfil()
+		
 		layout=[
-			[sg.Text('Nome'), sg.Input()],
+			[sg.Text(x['name']), sg.Input()],
 			[sg.Text(banca()), sg.Input()],
-			[sg.Button('Enviar')]
+			[sg.Button('Enviar')],
+			
 		]
 
 		janela=sg.Window('Dados do usuário').layout(layout)
@@ -99,22 +129,10 @@ class TelaPython:
 		self.button, self.values = janela.Read()
 
 	def Iniciar(self):
+		#par = API.get_all_open_time()
 		print(self.values)
 
-'''
-par = API.get_all_open_time()
 
-for paridade in par['binary']:
-	
-	if par['binary'][paridade]['open'] == True:
-		print('[ BINARY ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'binary')))
-
-print('\n')
-
-for paridade in par['digital']:
-	
-	if par['digital'][paridade]['open'] == True:
-		print('[ DIGITAL ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'digital')))
-'''
-tela = TelaPython()
-tela.Iniciar()
+historico()
+#tela = TelaPython()
+#tela.Iniciar()
