@@ -1,4 +1,4 @@
-import time, json
+import time, json, sys
 from iqoptionapi.stable_api import IQ_Option
 from datetime import datetime
 from dateutil import tz
@@ -107,11 +107,50 @@ def historico():
 	for x in historico['positions']:
 		print(json.dumps(x, indent=1))
 	'''
+	'''
+		:::::::::::::::: [ MODO DIGITAL ] ::::::::::::::::
+	FINAL OPERACAO : historico['positions']['close_time']
+	INICIO OPERACAO: historico['positions']['open_time']
+	LUCRO          : historico['positions']['close_profit']
+	ENTRADA        : historico['positions']['invest']
+	PARIDADE       : historico['positions']['raw_event']['instrument_underlying']
+	DIRECAO        : historico['positions']['raw_event']['instrument_dir']
+	VALOR          : historico['positions']['raw_event']['buy_amount']
+
+	:::::::::::::::: [ MODO BINARIO ] ::::::::::::::::
+	MODO TURBO tem as chaves do dict diferentes para a direção da operação(put ou call) 
+		e para exibir a paridade, deve ser utilizado:
+	DIRECAO : historico['positions']['raw_event']['direction']
+	PARIDADE: historico['positions']['raw_event']['active']
+	'''
 
 	for x in historico['positions']:
 		print('PAR: '+str(x['raw_event']['active'])+' /  DIRECAO: '+str(x['raw_event']['direction'])+' / VALOR: '+str(x['invest']))
 		print('LUCRO: '+str(x['close_profit'] if x['close_profit'] == 0 else round(x['close_profit']-x['invest'], 2) ) + ' | INICIO OP: '+str(timestamp_converter(x['open_time'] / 1000))+' / FIM OP: '+str(timestamp_converter(x['close_time'] / 1000)))
 		print('\n')
+
+def fazer_entrada(valor, par, tipo, timeframe):
+	#timeframe = tempo em min, valor = valor da entrada, par = moedas tipo 'EURUSD', tipo = put ou call
+
+	#digital
+	_,id = API.buy_digital_spot(par, valor, tipo, timeframe)
+	if isinstance(id, int):
+		while True:
+			status, lucro =  API.check_win_digital_v2(id)
+
+			if status:
+				if lucro > 0:
+					print('RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)))
+				else:
+					print('RESULTADO: LOSS / LUCRO = -' + str(valor))
+				break
+
+	#binaria
+	status, id = API.buy(valor, par, tipo, timeframe)
+
+	if status:
+		resultado, lucro = API.check_win_v3(id)
+		print('RESULTADO: ' + resultado + ' / LUCRO = ' + str(round(lucro, 2)))
 
 class TelaPython:
 	def __init__(self):
@@ -133,6 +172,7 @@ class TelaPython:
 		print(self.values)
 
 
-historico()
+#fazer_entrada(2, 'USDCAD', 'call', 1)
+
 #tela = TelaPython()
 #tela.Iniciar()
