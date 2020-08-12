@@ -4,6 +4,9 @@ from datetime import datetime
 from dateutil import tz
 import PySimpleGUI as sg
 
+sg.theme('DarkAmber') 
+
+
 #desabilitar mensagens de erro
 #logging.disable(level=(logging.ERROR))
 
@@ -24,11 +27,10 @@ def login(self):
 		print(f'Conectado com sucesso')
 		self.janela.close()
 		entradas = TelaEntradas(API)
-		entradas.Iniciar()
 
 	return API
 
-def perfil():
+def perfil(API):
 	perfil = json.loads(json.dumps(API.get_profile()))
 
 	return perfil['result']
@@ -163,34 +165,46 @@ def fazer_entrada(valor, par, tipo, timeframe):
 		resultado, lucro = API.check_win_v4(id)
 		print('RESULTADO: ' + resultado + ' / LUCRO = ' + str(round(lucro, 2)))
 
-class TelaEntradas:
-	def __init__(self, api):
+
+def TelaEntradas(api):
 		
-		layout2 = [
-			[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
-			[sg.Text('Lista de entradas: '), sg.Input()],
-			[sg.Button('Login')],
-		]
+	''' COMPARAÇÃO HORARIO
+	if datetime.now().strftime('%d-%m-%Y %H:%M') == 'horario aqui no mesmo formato':
+		print('mesma hora')
+	'''
 
-		self.janela = sg.Window('Tela de login na IQ Option').layout(layout2)
+	x = perfil(api)
+	layout2 = [
+		[sg.Text('Bem-vindo '), sg.Text(x['name'])],
+		[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
+		[sg.Text('Horário atual: '), sg.Text(datetime.now().strftime('%d-%m-%Y %H:%M:%S'), key='DATA')],
+		[sg.Text('Lista de entradas: '), sg.Input()],
+		[sg.Button('Login'), sg.Quit()],
+	]
+	janela2 = sg.Window('Tela de login na IQ Option').layout(layout2)
 
-	def Iniciar(self):
-		while True:
-			self.button, self.values = self.janela.Read()
-			print(f'{self.values[0]}')
 
-class TelaPython:
+	while True:
+		event, values = janela2.Read(timeout=10)
+		#print(f'{self.values[0]}')
+
+		if event in (None, 'Quit'):
+			break
+
+		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+		#time.sleep(1)
+
+class TelaLogin:
 	def __init__(self):
 		
 		layout=[
 			[sg.Text('E-mail: '), sg.Input()],
 			[sg.Text('Senha: '), sg.Input(password_char=('*'))],
 			[sg.Button('Login')],
-			[sg.Output(size=(50,20))]
+			[sg.Output(size=(50,15))],
 		]
 
 		self.janela = sg.Window('Tela de login na IQ Option').layout(layout)
-
 
 	def Iniciar(self):
 		while True:
@@ -204,5 +218,5 @@ class TelaPython:
 
 #fazer_entrada(2, 'AUDJPY', 'call', 1)
 
-tela = TelaPython()
+tela = TelaLogin()
 tela.Iniciar()
