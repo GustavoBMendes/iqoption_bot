@@ -8,9 +8,11 @@ import PySimpleGUI as sg
 #logging.disable(level=(logging.ERROR))
 
 
-def login(email, senha):
-	API = IQ_Option(email, senha)
+def login(self):
+	API = IQ_Option(self.values[0], self.values[1])
 	API.connect()
+
+	
 
 	#API.change_balance('PRACTICE') #PRACTICE / REAL
 	#print('Tipo de conta: ', API.get_balance_mode())
@@ -20,6 +22,9 @@ def login(email, senha):
 
 	else:
 		print(f'Conectado com sucesso')
+		self.janela.close()
+		entradas = TelaEntradas(API)
+		entradas.Iniciar()
 
 	return API
 
@@ -34,7 +39,7 @@ def timestamp_converter(x):
 	
 	return str(hora.astimezone(tz.gettz('America/Sao Paulo')))[:-6]
 
-def banca():
+def banca(API):
 	return API.get_balance()
 
 def capturarVelas(par, tempo_vela, num_velas): #tempo em segundos
@@ -158,23 +163,40 @@ def fazer_entrada(valor, par, tipo, timeframe):
 		resultado, lucro = API.check_win_v4(id)
 		print('RESULTADO: ' + resultado + ' / LUCRO = ' + str(round(lucro, 2)))
 
+class TelaEntradas:
+	def __init__(self, api):
+		
+		layout2 = [
+			[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
+			[sg.Text('Lista de entradas: '), sg.Input()],
+			[sg.Button('Login')],
+		]
+
+		self.janela = sg.Window('Tela de login na IQ Option').layout(layout2)
+
+	def Iniciar(self):
+		while True:
+			self.button, self.values = self.janela.Read()
+			print(f'{self.values[0]}')
+
 class TelaPython:
 	def __init__(self):
 		
 		layout=[
 			[sg.Text('E-mail: '), sg.Input()],
-			[sg.Text('Senha: '), sg.Input()],
+			[sg.Text('Senha: '), sg.Input(password_char=('*'))],
 			[sg.Button('Login')],
-			[sg.Output()]
+			[sg.Output(size=(50,20))]
 		]
 
-		self.janela=sg.Window('Dados do usuário').layout(layout)
+		self.janela = sg.Window('Tela de login na IQ Option').layout(layout)
 
 
 	def Iniciar(self):
 		while True:
 			self.button, self.values = self.janela.Read()
-			API = login(self.values[0], self.values[1])
+			print(f'Por favor, aguarde.')
+			API = login(self)
 			#par = API.get_all_open_time()
 			print(f'{self.values[0]}')
 			print(f'{self.values[1]}')
