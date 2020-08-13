@@ -13,6 +13,7 @@ sg.theme('DarkAmber')
 
 def login(self):
 	API = IQ_Option(self.values[0], self.values[1])
+	
 	API.connect()
 
 	
@@ -25,6 +26,7 @@ def login(self):
 
 	else:
 		print(f'Conectado com sucesso')
+		#paridades(API)
 		self.janela.close()
 		entradas = TelaEntradas(API)
 
@@ -76,7 +78,7 @@ def capturarVelas_realTime(par, tempo_vela):
 		time.sleep(1)
 	API.stop_candles_stream(par, tempo_vela)
 
-def payout(par, tipo, timeframe = 1): #tipo = DIGITAL/BINARY; timeframe = tempo de expiração da vela
+def payout(API, par, tipo, timeframe = 1): #tipo = DIGITAL/BINARY; timeframe = tempo de expiração da vela
 	
 	if tipo == 'binary':
 		a = API.get_all_profit()
@@ -98,20 +100,20 @@ def payout(par, tipo, timeframe = 1): #tipo = DIGITAL/BINARY; timeframe = tempo 
 			print('Ativo não existe')
 			return False
 
-def paridades():
+def paridades(API):
 	par = API.get_all_open_time()
 
 	for paridade in par['binary']:
 		
 		if par['binary'][paridade]['open'] == True:
-			print('[ BINARY ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'binary')))
+			print('[ BINARY ]: ' + paridade + ' | Payout: ' + str(payout(API, paridade, 'binary')))
 
 	print('\n')
 
 	for paridade in par['digital']:
 		
 		if par['digital'][paridade]['open'] == True:
-			print('[ DIGITAL ]: ' + paridade + ' | Payout: ' + str(payout(paridade, 'digital')))
+			print('[ DIGITAL ]: ' + paridade + ' | Payout: ' + str(payout(API, paridade, 'digital')))
 
 def historico():
 	status,historico = API.get_position_history_v2('turbo-option', 7, 0, 0, 0)
@@ -142,7 +144,7 @@ def historico():
 		print('LUCRO: '+str(x['close_profit'] if x['close_profit'] == 0 else round(x['close_profit']-x['invest'], 2) ) + ' | INICIO OP: '+str(timestamp_converter(x['open_time'] / 1000))+' / FIM OP: '+str(timestamp_converter(x['close_time'] / 1000)))
 		print('\n')
 
-def fazer_entrada(valor, par, tipo, timeframe):
+def fazer_entrada(API, valor, par, tipo, timeframe):
 	#timeframe = tempo em min, valor = valor da entrada, par = moedas tipo 'EURUSD', tipo = put ou call
 
 	#digital
@@ -179,17 +181,28 @@ def TelaEntradas(api):
 		[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
 		[sg.Text('Horário atual: '), sg.Text(datetime.now().strftime('%d-%m-%Y %H:%M:%S'), key='DATA')],
 		[sg.Text('Lista de entradas: '), sg.Input()],
-		[sg.Button('Login'), sg.Quit()],
+		[sg.Button('Iniciar Robô'), sg.Button('Cancelar entradas')], #ao cancelar entradas o programa é fechado
 	]
 	janela2 = sg.Window('Tela de login na IQ Option').layout(layout2)
-
+	inicio = 0
+	lista = []
 
 	while True:
 		event, values = janela2.Read(timeout=10)
-		#print(f'{self.values[0]}')
 
-		if event in (None, 'Quit'):
+		if event in (None, 'Cancelar entradas', sg.WIN_CLOSED):
 			break
+
+		if event == 'Iniciar Robô':
+			if inicio == 0:
+				lista = ['11:06:00', '11:07:00']
+				inicio = 1
+
+		if inicio == 1:
+			for hora in lista:
+				if hora == datetime.now().strftime('%H:%M:%S'):
+					print('Fez entrada')
+					fazer_entrada(api, 2, 'CADCHF', 'call', 2)
 
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 		#time.sleep(1)
@@ -211,7 +224,6 @@ class TelaLogin:
 			self.button, self.values = self.janela.Read()
 			print(f'Por favor, aguarde.')
 			API = login(self)
-			#par = API.get_all_open_time()
 			print(f'{self.values[0]}')
 			print(f'{self.values[1]}')
 
