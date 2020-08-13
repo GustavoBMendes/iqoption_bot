@@ -28,7 +28,7 @@ def login(self):
 		print(f'Conectado com sucesso')
 		#paridades(API)
 		self.janela.close()
-		entradas = TelaEntradas(API)
+		TelaEntradas(API)
 
 	return API
 
@@ -144,10 +144,11 @@ def historico():
 		print('LUCRO: '+str(x['close_profit'] if x['close_profit'] == 0 else round(x['close_profit']-x['invest'], 2) ) + ' | INICIO OP: '+str(timestamp_converter(x['open_time'] / 1000))+' / FIM OP: '+str(timestamp_converter(x['close_time'] / 1000)))
 		print('\n')
 
-def fazer_entrada(API, valor, par, tipo, timeframe):
+def fazer_entrada(API, valor, par, tipo, timeframe, hora):
 	#timeframe = tempo em min, valor = valor da entrada, par = moedas tipo 'EURUSD', tipo = put ou call
 
 	#digital
+	
 	_,id = API.buy_digital_spot(par, valor, tipo, timeframe)
 	if isinstance(id, int):
 		while True:
@@ -155,25 +156,39 @@ def fazer_entrada(API, valor, par, tipo, timeframe):
 
 			if status:
 				if lucro > 0:
-					print('RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)))
+					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)))
+					print('\n')
+					
 				else:
-					print('RESULTADO: LOSS / LUCRO = -' + str(valor))
+					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = ' + str(valor))
+					print('\n')
 				break
-
+	
 	#binaria
 	status, id = API.buy(valor, par, tipo, timeframe)
 
 	if status:
 		resultado, lucro = API.check_win_v4(id)
-		print('RESULTADO: ' + resultado + ' / LUCRO = ' + str(round(lucro, 2)))
+		if lucro > 0:
+			print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)))
+		else:
+			print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = ' + str(valor))
+		print('\n')
 
+def carregar_sinais():
+	arquivo = open('sinais.txt', encoding='UTF-8')
+	lista = arquivo.read()
+	arquivo.close
+	
+	lista = lista.split('\n')
+	
+	for index,a in enumerate(lista):
+		if a == '':
+			del lista[index]
+	
+	return lista
 
 def TelaEntradas(api):
-		
-	''' COMPARAÇÃO HORARIO
-	if datetime.now().strftime('%d-%m-%Y %H:%M') == 'horario aqui no mesmo formato':
-		print('mesma hora')
-	'''
 
 	x = perfil(api)
 	layout2 = [
@@ -182,10 +197,11 @@ def TelaEntradas(api):
 		[sg.Text('Horário atual: '), sg.Text(datetime.now().strftime('%d-%m-%Y %H:%M:%S'), key='DATA')],
 		[sg.Text('Lista de entradas: '), sg.Input()],
 		[sg.Button('Iniciar Robô'), sg.Button('Cancelar entradas')], #ao cancelar entradas o programa é fechado
+		[sg.Output(size=(50,15))],
 	]
 	janela2 = sg.Window('Tela de login na IQ Option').layout(layout2)
 	inicio = 0
-	lista = []
+	lista = dict()
 	em_andamento = []
 
 	while True:
@@ -196,16 +212,18 @@ def TelaEntradas(api):
 
 		if event == 'Iniciar Robô':
 			if inicio == 0:
-				lista = ['14:44:00', '14:45:00']
+				lista = carregar_sinais()
 				inicio = 1
+				print('Lista de sinais carregada!')
 
 		if inicio == 1:
-			for hora in lista:
-				if hora == datetime.now().strftime('%H:%M:%S'):
+			for sinal in lista:
+				dados = sinal.split(',')
+				if dados[0] == datetime.now().strftime('%H:%M:%S'):
 					print('Fez entrada')
-					em_andamento.append(hora)
-					lista.remove(hora)
-					threading.Thread(target=fazer_entrada, args=(api, 2, 'AUDJPY', 'call', 1, )).start()
+					#em_andamento.append(dados[0])
+					threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
+					lista.remove(sinal)
 
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 		#time.sleep(1)
