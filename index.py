@@ -1,4 +1,4 @@
-import time, json, sys, logging
+import time, json, sys, logging, threading
 from iqoptionapi.stable_api import IQ_Option
 from datetime import datetime
 from dateutil import tz
@@ -186,6 +186,7 @@ def TelaEntradas(api):
 	janela2 = sg.Window('Tela de login na IQ Option').layout(layout2)
 	inicio = 0
 	lista = []
+	em_andamento = []
 
 	while True:
 		event, values = janela2.Read(timeout=10)
@@ -195,14 +196,16 @@ def TelaEntradas(api):
 
 		if event == 'Iniciar Robô':
 			if inicio == 0:
-				lista = ['11:06:00', '11:07:00']
+				lista = ['14:44:00', '14:45:00']
 				inicio = 1
 
 		if inicio == 1:
 			for hora in lista:
 				if hora == datetime.now().strftime('%H:%M:%S'):
 					print('Fez entrada')
-					fazer_entrada(api, 2, 'CADCHF', 'call', 2)
+					em_andamento.append(hora)
+					lista.remove(hora)
+					threading.Thread(target=fazer_entrada, args=(api, 2, 'AUDJPY', 'call', 1, )).start()
 
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 		#time.sleep(1)
