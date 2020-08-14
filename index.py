@@ -10,6 +10,7 @@ sg.theme('DarkAmber')
 #desabilitar mensagens de erro
 #logging.disable(level=(logging.ERROR))
 
+lucro_total = 0
 
 def login(self):
 	API = IQ_Option(self.values[0], self.values[1])
@@ -149,6 +150,8 @@ def fazer_entrada(API, valor, par, tipo, timeframe, hora):
 
 	#digital
 	
+	global lucro_total
+	
 	_,id = API.buy_digital_spot(par, valor, tipo, timeframe)
 	if isinstance(id, int):
 		while True:
@@ -156,12 +159,15 @@ def fazer_entrada(API, valor, par, tipo, timeframe, hora):
 
 			if status:
 				if lucro > 0:
-					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)))
-					print('\n')
+					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)) + '\n')
+					lucro_total += lucro
+					lucro = 0
 					
 				else:
-					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = ' + str(valor))
-					print('\n')
+					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = -' + str(valor) + '\n')
+					lucro_total -= valor
+					lucro = 0
+				print('LUCRO TOTAL: ' + str(lucro_total) + '\n')
 				break
 	
 	#binaria
@@ -170,10 +176,14 @@ def fazer_entrada(API, valor, par, tipo, timeframe, hora):
 	if status:
 		resultado, lucro = API.check_win_v4(id)
 		if lucro > 0:
-			print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)))
+			print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)) + '\n')
+			lucro_total += lucro
+			lucro = 0
 		else:
-			print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = ' + str(valor))
-		print('\n')
+			print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = -' + str(valor) + '\n')
+			lucro_total -= valor
+			lucro = 0
+		print('LUCRO TOTAL: ' + str(lucro_total) + '\n')
 
 def carregar_sinais():
 	arquivo = open('sinais.txt', encoding='UTF-8')
@@ -188,6 +198,115 @@ def carregar_sinais():
 	
 	return lista
 
+def modo_stopLoss(api, janela2, inicio, lista, em_andamento):
+	print('ATENÇÃO!\nModo stop win DESATIVADO! \nModo stop loss ATIVADO!\n')
+	while True:
+		event, values = janela2.Read(timeout=10)
+
+		if event in (None, sg.WIN_CLOSED):
+			break
+
+		if event in ('Encerrar entradas'):
+			print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
+			break
+
+		for sinal in lista:
+			dados = sinal.split(',')
+			if dados[0] == datetime.now().strftime('%H:%M:%S'):
+				if lucro_total > -(stop_loss):
+					print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
+					#em_andamento.append(dados[0])
+					threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
+					lista.remove(sinal)
+
+		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+		#time.sleep(1)
+
+def modo_stopWin(api, janela2, inicio, lista, em_andamento):
+	print('ATENÇÃO!\nModo stop win ATIVADO! \nModo stop loss DESATIVADO!\n')
+	while True:
+		event, values = janela2.Read(timeout=10)
+
+		if event in (None, sg.WIN_CLOSED):
+			break
+
+		if event in ('Encerrar entradas'):
+			print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
+			break
+
+		for sinal in lista:
+			dados = sinal.split(',')
+			if dados[0] == datetime.now().strftime('%H:%M:%S'):
+				if lucro_total < stop_win:
+					print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
+					#em_andamento.append(dados[0])
+					threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
+					lista.remove(sinal)
+
+		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+		#time.sleep(1)
+
+def modo_stopWin_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, stop_win):
+
+	print('ATENÇÃO!\nModo stop win ATIVADO! \nModo stop loss ATIVADO!\n')
+	global lucro_total
+
+	while True:
+		event, values = janela2.Read(timeout=10)
+
+		if event in (None, sg.WIN_CLOSED):
+			break
+
+		if event in ('Encerrar entradas'):
+			print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
+			break
+
+		for sinal in lista:
+			dados = sinal.split(',')
+			if dados[0] == datetime.now().strftime('%H:%M:%S'):
+				print('lucro total', lucro_total)
+				print('stop loss', -(stop_loss))
+				print('stop win', stop_win)
+				if lucro_total > -(stop_loss) and lucro_total < stop_win:
+					print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
+					#em_andamento.append(dados[0])
+					lista.remove(sinal)
+					threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
+				
+				if len(lista) == 0:
+					print('A lista chegou ao fim!')
+					print('Para finalizar, clique no botão Encerrar entradas')
+					print('Você ainda pode alterar o arquivo sinais.txt e após isso importar mais uma lista clicando no botão Iniciar robô\n')	
+
+		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+
+		
+
+		#time.sleep(1)
+
+def modo_semStops(api, janela2, inicio, lista, em_andamento):
+	print('ATENÇÃO!\nModo stop win DESATIVADO! \nModo stop loss DESATIVADO!\n')
+	while True:
+		event, values = janela2.Read(timeout=10)
+
+		if event in (None, sg.WIN_CLOSED):
+			break
+
+		if event in ('Encerrar entradas'):
+			print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
+			break
+
+		for sinal in lista:
+			dados = sinal.split(',')
+			if dados[0] == datetime.now().strftime('%H:%M:%S'):
+				print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
+				#em_andamento.append(dados[0])
+				threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
+				lista.remove(sinal)
+
+		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+		#time.sleep(1)
+
 def TelaEntradas(api):
 
 	x = perfil(api)
@@ -196,35 +315,66 @@ def TelaEntradas(api):
 		[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
 		[sg.Text('Horário atual: '), sg.Text(datetime.now().strftime('%d-%m-%Y %H:%M:%S'), key='DATA')],
 		[sg.Text('Lista de entradas: '), sg.Input()],
-		[sg.Button('Iniciar Robô'), sg.Button('Cancelar entradas')], #ao cancelar entradas o programa é fechado
-		[sg.Output(size=(50,15))],
+		[sg.Text('Stop Win: '), sg.Input('0')],
+		[sg.Text('Stop Loss: '), sg.Input('0')],
+		[sg.Button('Iniciar Robô'), sg.Button('Encerrar entradas')], #ao cancelar entradas o programa é fechado
+		#[sg.Output(size=(50,15))],
 	]
 	janela2 = sg.Window('Tela de login na IQ Option').layout(layout2)
+
 	inicio = 0
+	stop_win = 0
+	stop_loss = 0
 	lista = dict()
 	em_andamento = []
 
 	while True:
 		event, values = janela2.Read(timeout=10)
 
-		if event in (None, 'Cancelar entradas', sg.WIN_CLOSED):
+		if event in (None, sg.WIN_CLOSED):
 			break
+
+		if event in ('Encerrar entradas'):
+			print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
+			inicio = 0
+			lista = dict()
+			em_andamento = []
 
 		if event == 'Iniciar Robô':
 			if inicio == 0:
+				stop_win = float(values[1])
+				stop_loss = float(values[2])
+
 				lista = carregar_sinais()
 				inicio = 1
 				print('Lista de sinais carregada!')
+				print('A partir de agora os sinais da lista e as configurações de stop win/loss não podem ser alterados, caso queira alterá-los, clique no botão Cancelar Entradas.\n')
 
-		if inicio == 1:
-			for sinal in lista:
-				dados = sinal.split(',')
-				if dados[0] == datetime.now().strftime('%H:%M:%S'):
-					print('Fez entrada')
-					#em_andamento.append(dados[0])
-					threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
-					lista.remove(sinal)
+				if stop_loss > 0 and stop_win > 0:
+					modo_stopWin_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, stop_win)
+					inicio = 0
+					lista = dict()
+					em_andamento = []
 
+
+				elif stop_loss > 0 and stop_win == 0:
+					modo_stopLoss(api, janela2, inicio, lista, em_andamento)
+					inicio = 0
+					lista = dict()
+					em_andamento = []
+
+				elif stop_loss == 0 and stop_win > 0:
+					modo_stopWin(api, janela2, inicio, lista, em_andamento)
+					inicio = 0
+					lista = dict()
+					em_andamento = []
+				
+				else:
+					modo_semStops(api, janela2, inicio, lista, em_andamento)
+					inicio = 0
+					lista = dict()
+					em_andamento = []
+		
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 		#time.sleep(1)
 
