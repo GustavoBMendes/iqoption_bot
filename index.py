@@ -29,7 +29,7 @@ def login(self):
 		print(f'Conectado com sucesso')
 		#paridades(API)
 		self.janela.close()
-		TelaEntradas(API)
+		TelaEntradas(self.values[0], self.values[1])
 
 	return API
 
@@ -145,34 +145,39 @@ def historico():
 		print('LUCRO: '+str(x['close_profit'] if x['close_profit'] == 0 else round(x['close_profit']-x['invest'], 2) ) + ' | INICIO OP: '+str(timestamp_converter(x['open_time'] / 1000))+' / FIM OP: '+str(timestamp_converter(x['close_time'] / 1000)))
 		print('\n')
 
-def fazer_entrada(API, valor, par, tipo, timeframe, hora):
+def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha):
 	#timeframe = tempo em min, valor = valor da entrada, par = moedas tipo 'EURUSD', tipo = put ou call
 
 	#digital
 	
+	API = IQ_Option(email, senha)
+	API.connect()
+
 	global lucro_total
-	
+	thread_data = threading.local()
+
 	_,id = API.buy_digital_spot(par, valor, tipo, timeframe)
+	
 	if isinstance(id, int):
+		
 		while True:
-			status, lucro =  API.check_win_digital_v2(id)
+			status, lucro = API.check_win_digital_v2(id)
 
 			if status:
 				if lucro > 0:
 					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)) + '\n')
 					lucro_total += lucro
-					lucro = 0
 					
 				else:
 					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = -' + str(valor) + '\n')
 					lucro_total -= valor
-					lucro = 0
 				print('LUCRO TOTAL: ' + str(lucro_total) + '\n')
-				break
-	
+				return
+		
+
 	#binaria
 	status, id = API.buy(valor, par, tipo, timeframe)
-
+	
 	if status:
 		resultado, lucro = API.check_win_v4(id)
 		if lucro > 0:
@@ -184,6 +189,7 @@ def fazer_entrada(API, valor, par, tipo, timeframe, hora):
 			lucro_total -= valor
 			lucro = 0
 		print('LUCRO TOTAL: ' + str(lucro_total) + '\n')
+	
 
 def carregar_sinais():
 	arquivo = open('sinais.txt', encoding='UTF-8')
@@ -246,7 +252,7 @@ def modo_stopWin(api, janela2, inicio, lista, em_andamento):
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 		#time.sleep(1)
 
-def modo_stopWin_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, stop_win):
+def modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_win, email, senha):
 
 	print('ATENÇÃO!\nModo stop win ATIVADO! \nModo stop loss ATIVADO!\n')
 	global lucro_total
@@ -271,7 +277,7 @@ def modo_stopWin_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, 
 					print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
 					#em_andamento.append(dados[0])
 					lista.remove(sinal)
-					threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
+					threading.Thread(target=fazer_entrada, args=(2, dados[1], dados[2], 1, dados[0], email, senha, )).start()
 				
 				if len(lista) == 0:
 					print('A lista chegou ao fim!')
@@ -307,12 +313,13 @@ def modo_semStops(api, janela2, inicio, lista, em_andamento):
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 		#time.sleep(1)
 
-def TelaEntradas(api):
+def TelaEntradas(email, senha):
 
-	x = perfil(api)
+	#x = perfil(api)
 	layout2 = [
-		[sg.Text('Bem-vindo '), sg.Text(x['name'])],
-		[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
+		#[sg.Text('Bem-vindo '), sg.Text(x['name'])],
+		#[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
+		[sg.Text('Bem-vindo ')],
 		[sg.Text('Horário atual: '), sg.Text(datetime.now().strftime('%d-%m-%Y %H:%M:%S'), key='DATA')],
 		[sg.Text('Lista de entradas: '), sg.Input()],
 		[sg.Text('Stop Win: '), sg.Input('0')],
@@ -351,7 +358,7 @@ def TelaEntradas(api):
 				print('A partir de agora os sinais da lista e as configurações de stop win/loss não podem ser alterados, caso queira alterá-los, clique no botão Cancelar Entradas.\n')
 
 				if stop_loss > 0 and stop_win > 0:
-					modo_stopWin_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, stop_win)
+					modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_win, email, senha)
 					inicio = 0
 					lista = dict()
 					em_andamento = []
