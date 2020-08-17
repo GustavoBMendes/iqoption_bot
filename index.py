@@ -6,7 +6,6 @@ import PySimpleGUI as sg
 
 sg.theme('DarkAmber') 
 
-
 #desabilitar mensagens de erro
 #logging.disable(level=(logging.ERROR))
 
@@ -29,7 +28,7 @@ def login(self):
 		print(f'Conectado com sucesso')
 		#paridades(API)
 		self.janela.close()
-		TelaEntradas(self.values[0], self.values[1])
+		TelaEntradas(API, self.values[0], self.values[1])
 
 	return API
 
@@ -159,7 +158,7 @@ def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha):
 	_,id = API.buy_digital_spot(par, valor, tipo, timeframe)
 	
 	if isinstance(id, int):
-		
+		print('Fez entrada -> Hora: ' + hora + ', Moeda: ' + par + ', Direção: ' + tipo)
 		while True:
 			status, lucro = API.check_win_digital_v2(id)
 
@@ -179,6 +178,7 @@ def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha):
 	status, id = API.buy(valor, par, tipo, timeframe)
 	
 	if status:
+		print('Fez entrada -> Hora: ' + hora + ', Moeda: ' + par + ', Direção: ' + tipo)
 		resultado, lucro = API.check_win_v4(id)
 		if lucro > 0:
 			print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: WIN / LUCRO = ' + str(round(lucro, 2)) + '\n')
@@ -189,6 +189,9 @@ def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha):
 			lucro_total -= valor
 			lucro = 0
 		print('LUCRO TOTAL: ' + str(lucro_total) + '\n')
+		return
+
+	print('Ativo não disponível no modo digital e binário')
 	
 
 def carregar_sinais():
@@ -270,14 +273,17 @@ def modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_
 		for sinal in lista:
 			dados = sinal.split(',')
 			if dados[0] == datetime.now().strftime('%H:%M:%S'):
-				print('lucro total', lucro_total)
-				print('stop loss', -(stop_loss))
-				print('stop win', stop_win)
+
 				if lucro_total > -(stop_loss) and lucro_total < stop_win:
-					print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
 					#em_andamento.append(dados[0])
 					lista.remove(sinal)
 					threading.Thread(target=fazer_entrada, args=(2, dados[1], dados[2], 1, dados[0], email, senha, )).start()
+
+				else:
+					print('Stop win ou stop loss atingido.')
+					print('A entrada da hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2] + ' não foi feita.')
+					print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
+					return
 				
 				if len(lista) == 0:
 					print('A lista chegou ao fim!')
@@ -285,8 +291,6 @@ def modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_
 					print('Você ainda pode alterar o arquivo sinais.txt e após isso importar mais uma lista clicando no botão Iniciar robô\n')	
 
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
-
-		
 
 		#time.sleep(1)
 
@@ -313,33 +317,64 @@ def modo_semStops(api, janela2, inicio, lista, em_andamento):
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 		#time.sleep(1)
 
-def TelaEntradas(email, senha):
-
-	#x = perfil(api)
+def TelaEntradas(api, email, senha):
+	
+	x = perfil(api)
 	layout2 = [
-		#[sg.Text('Bem-vindo '), sg.Text(x['name'])],
-		#[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
-		[sg.Text('Bem-vindo ')],
+		[sg.Text('Bem-vindo '), sg.Text(x['name'])],
+		[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
 		[sg.Text('Horário atual: '), sg.Text(datetime.now().strftime('%d-%m-%Y %H:%M:%S'), key='DATA')],
-		[sg.Text('Lista de entradas: '), sg.Input()],
-		[sg.Text('Stop Win: '), sg.Input('0')],
-		[sg.Text('Stop Loss: '), sg.Input('0')],
-		[sg.Button('Iniciar Robô'), sg.Button('Encerrar entradas')], #ao cancelar entradas o programa é fechado
-		#[sg.Output(size=(50,15))],
-	]
-	janela2 = sg.Window('Tela de login na IQ Option').layout(layout2)
+		[sg.Radio('Conta real', "RADIO1", default=True),
+    	sg.Radio('Conta de treinamento', "RADIO1")],
+		[sg.Text('_'*115, text_color='white')],
 
+		[sg.Text('ATENÇÃO:', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('Para importar os sinais, é necessário configurar o arquivo "sinais.txt" ', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('Este arquivo se encontra na mesma pasta de inicialização do robô.', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('Ele deve ser configurado da seguinte forma: ', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('Um sinal em cada linha do arquivo, as informações devem estar separadas por vírgula "," e não podem conter espaço entre elas.', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('As informações devem ser escritas da seguinte forma e na seguinte ordem: ', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('Horário,par de moedas,call ou put,tempo de expiração', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('Exemplo: ', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('12:16:00,EURUSD,call,1', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('O arquivo "exemplo.txt" demonstra exatamente como a lista deve ser configurada.', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
+		[sg.Text('_'*115, text_color='white')],
+
+		[sg.Text('Inserir o valor de Stop win/loss nos proximos 2 campos, caso queira desabilitar essas funções, deixe o valor como 0 (zero).')],
+		[sg.Text('O robô pode ser configurado para trabalhar em 4 modos: Com stop win e stop loss, apenas stop win, apenas stop loss, ou sem stop.')],
+		[sg.Text('Stop Win: ')],
+		[sg.Input('0')],
+		[sg.Text('Stop Loss: ')],
+		[sg.Input('0')],
+		[sg.Text('_'*115, text_color='white')],
+
+		[sg.Text('Valor das entradas: ')],
+		[sg.Input('0')],
+		[sg.Text('_'*115, text_color='white')],
+
+		[sg.Text('Número de Martin Gales: ')],
+		[sg.Input('0')],
+		[sg.Button('Iniciar Robô'), sg.Button('Encerrar entradas')], #ao cancelar entradas o programa é fechado
+		[sg.Output(size=(115,10))],
+	]
+	janela2 = sg.Window('Tela de Operações').layout(layout2)
+	
 	inicio = 0
 	stop_win = 0
 	stop_loss = 0
 	lista = dict()
 	em_andamento = []
+	msg_inicio = 0
 
 	while True:
 		event, values = janela2.Read(timeout=10)
 
 		if event in (None, sg.WIN_CLOSED):
 			break
+
+		if msg_inicio == 0:
+			print('É aqui que o robô irá conversar com você!')
+			msg_inicio = 1
 
 		if event in ('Encerrar entradas'):
 			print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
@@ -392,7 +427,7 @@ class TelaLogin:
 			[sg.Text('E-mail: '), sg.Input()],
 			[sg.Text('Senha: '), sg.Input(password_char=('*'))],
 			[sg.Button('Login')],
-			[sg.Output(size=(50,15))],
+			[sg.Output(size=(50,5))],
 		]
 
 		self.janela = sg.Window('Tela de login na IQ Option').layout(layout)
