@@ -1,6 +1,7 @@
 import time, json, sys, logging, threading
 from iqoptionapi.stable_api import IQ_Option
 from datetime import datetime
+from datetime import timedelta
 from dateutil import tz
 import PySimpleGUI as sg
 
@@ -204,7 +205,7 @@ def carregar_sinais():
 	for index,a in enumerate(lista):
 		if a == '':
 			del lista[index]
-	
+
 	return lista
 
 def modo_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, email, senha):
@@ -261,7 +262,9 @@ def modo_stopWin(api, janela2, inicio, lista, em_andamento, stop_win, email, sen
 
 		for sinal in lista:
 			dados = sinal.split(',')
-			if dados[0] == datetime.now().strftime('%H:%M:%S'):
+			d = datetime.strptime(dados[0], '%H:%M:%S') + timedelta(seconds=-5)
+			print(d.strftime('%H:%M:%S'))
+			if d == datetime.now().strftime('%H:%M:%S'):
 
 				if lucro_total < stop_win:
 					#em_andamento.append(dados[0])
@@ -391,7 +394,7 @@ def TelaEntradas(api, email, senha):
 		[sg.Text('Número de Martin Gales: ')],
 		[sg.Input('0')],
 		[sg.Button('Iniciar Robô'), sg.Button('Encerrar entradas')], #ao cancelar entradas o programa é fechado
-		[sg.Output(size=(115,10))],
+		#[sg.Output(size=(115,10))],
 	]
 	janela2 = sg.Window('Tela de Operações').layout(layout2)
 	event, values = janela2.Read(timeout=10)
