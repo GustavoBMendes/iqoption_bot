@@ -207,8 +207,10 @@ def carregar_sinais():
 	
 	return lista
 
-def modo_stopLoss(api, janela2, inicio, lista, em_andamento):
+def modo_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, email, senha):
 	print('ATENÇÃO!\nModo stop win DESATIVADO! \nModo stop loss ATIVADO!\n')
+	global lucro_total
+
 	while True:
 		event, values = janela2.Read(timeout=10)
 
@@ -222,17 +224,31 @@ def modo_stopLoss(api, janela2, inicio, lista, em_andamento):
 		for sinal in lista:
 			dados = sinal.split(',')
 			if dados[0] == datetime.now().strftime('%H:%M:%S'):
+
 				if lucro_total > -(stop_loss):
-					print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
 					#em_andamento.append(dados[0])
-					threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
 					lista.remove(sinal)
+					threading.Thread(target=fazer_entrada, args=(2, dados[1], dados[2], 1, dados[0], email, senha, )).start()
+
+				else:
+					print('Stop loss atingido.')
+					print('A entrada da hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2] + ' não foi feita.')
+					print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
+					return
+				
+				if len(lista) == 0:
+					print('A lista chegou ao fim!')
+					print('Para finalizar, clique no botão Encerrar entradas')
+					print('Você ainda pode alterar o arquivo sinais.txt e após isso importar mais uma lista clicando no botão Iniciar robô\n')	
 
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+
 		#time.sleep(1)
 
-def modo_stopWin(api, janela2, inicio, lista, em_andamento):
+def modo_stopWin(api, janela2, inicio, lista, em_andamento, stop_win, email, senha):
 	print('ATENÇÃO!\nModo stop win ATIVADO! \nModo stop loss DESATIVADO!\n')
+	global lucro_total
+
 	while True:
 		event, values = janela2.Read(timeout=10)
 
@@ -246,13 +262,25 @@ def modo_stopWin(api, janela2, inicio, lista, em_andamento):
 		for sinal in lista:
 			dados = sinal.split(',')
 			if dados[0] == datetime.now().strftime('%H:%M:%S'):
+
 				if lucro_total < stop_win:
-					print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
 					#em_andamento.append(dados[0])
-					threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
 					lista.remove(sinal)
+					threading.Thread(target=fazer_entrada, args=(2, dados[1], dados[2], 1, dados[0], email, senha, )).start()
+
+				else:
+					print('Stop win atingido.')
+					print('A entrada da hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2] + ' não foi feita.')
+					print('Os sinais da lista foram cancelados! Agora você pode alterar sua lista de sinais e as configurações de stop win/loss.\n')
+					return
+				
+				if len(lista) == 0:
+					print('A lista chegou ao fim!')
+					print('Para finalizar, clique no botão Encerrar entradas')
+					print('Você ainda pode alterar o arquivo sinais.txt e após isso importar mais uma lista clicando no botão Iniciar robô\n')	
 
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+
 		#time.sleep(1)
 
 def modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_win, email, senha):
@@ -294,8 +322,10 @@ def modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_
 
 		#time.sleep(1)
 
-def modo_semStops(api, janela2, inicio, lista, em_andamento):
+def modo_semStops(janela2, inicio, lista, em_andamento, email, senha):
 	print('ATENÇÃO!\nModo stop win DESATIVADO! \nModo stop loss DESATIVADO!\n')
+	global lucro_total
+
 	while True:
 		event, values = janela2.Read(timeout=10)
 
@@ -309,12 +339,18 @@ def modo_semStops(api, janela2, inicio, lista, em_andamento):
 		for sinal in lista:
 			dados = sinal.split(',')
 			if dados[0] == datetime.now().strftime('%H:%M:%S'):
-				print('Fez entrada -> Hora: ' + dados[0] + ', Moeda: ' + dados[1] + ', Direção: ' + dados[2])
+
 				#em_andamento.append(dados[0])
-				threading.Thread(target=fazer_entrada, args=(api, 2, dados[1], dados[2], 1, dados[0], )).start()
 				lista.remove(sinal)
+				threading.Thread(target=fazer_entrada, args=(2, dados[1], dados[2], 1, dados[0], email, senha, )).start()
+
+				if len(lista) == 0:
+					print('A lista chegou ao fim!')
+					print('Para finalizar, clique no botão Encerrar entradas')
+					print('Você ainda pode alterar o arquivo sinais.txt e após isso importar mais uma lista clicando no botão Iniciar robô\n')	
 
 		janela2.FindElement('DATA').Update(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+
 		#time.sleep(1)
 
 def TelaEntradas(api, email, senha):
@@ -322,10 +358,10 @@ def TelaEntradas(api, email, senha):
 	x = perfil(api)
 	layout2 = [
 		[sg.Text('Bem-vindo '), sg.Text(x['name'])],
-		[sg.Text('Banca Inicial: '), sg.Text(banca(api))],
+		[sg.Text('Banca Inicial: '), sg.Text(banca(api), key='BANCA')],
 		[sg.Text('Horário atual: '), sg.Text(datetime.now().strftime('%d-%m-%Y %H:%M:%S'), key='DATA')],
-		[sg.Radio('Conta real', "RADIO1", default=True),
-    	sg.Radio('Conta de treinamento', "RADIO1")],
+		[sg.Text('Tipo de conta selecionada: '), sg.Text(api.get_balance_mode(), key='CONTA')],
+		[sg.Radio('Conta real', "RADIO1", key='CR', enable_events=True, default=True), sg.Radio('Conta de treinamento', "RADIO1", key='CT', enable_events=True)],
 		[sg.Text('_'*115, text_color='white')],
 
 		[sg.Text('ATENÇÃO:', text_color=sg.theme_element_background_color(), background_color=sg.theme_text_color())],
@@ -341,7 +377,7 @@ def TelaEntradas(api, email, senha):
 		[sg.Text('_'*115, text_color='white')],
 
 		[sg.Text('Inserir o valor de Stop win/loss nos proximos 2 campos, caso queira desabilitar essas funções, deixe o valor como 0 (zero).')],
-		[sg.Text('O robô pode ser configurado para trabalhar em 4 modos: Com stop win e stop loss, apenas stop win, apenas stop loss, ou sem stop.')],
+		[sg.Text('O robô pode ser configurado para trabalhar em 4 modos: Com stop win e stop loss, apenas stop win, apenas stop loss, ou sem os dois stops.')],
 		[sg.Text('Stop Win: ')],
 		[sg.Input('0')],
 		[sg.Text('Stop Loss: ')],
@@ -358,7 +394,12 @@ def TelaEntradas(api, email, senha):
 		[sg.Output(size=(115,10))],
 	]
 	janela2 = sg.Window('Tela de Operações').layout(layout2)
-	
+	event, values = janela2.Read(timeout=10)
+
+	if values['CR'] == True:
+		api.change_balance('REAL')
+		janela2.FindElement('CONTA').Update(api.get_balance_mode())
+
 	inicio = 0
 	stop_win = 0
 	stop_loss = 0
@@ -368,12 +409,22 @@ def TelaEntradas(api, email, senha):
 
 	while True:
 		event, values = janela2.Read(timeout=10)
-
+		
 		if event in (None, sg.WIN_CLOSED):
 			break
 
+		if event == 'CR':
+			api.change_balance('REAL')
+			janela2.FindElement('CONTA').Update(api.get_balance_mode())
+			print('Conta real selecionada')
+
+		if event == 'CT':
+			api.change_balance('PRACTICE')
+			janela2.FindElement('CONTA').Update(api.get_balance_mode())
+			print('Conta de treinamento selecionada')
+
 		if msg_inicio == 0:
-			print('É aqui que o robô irá conversar com você!')
+			print('É aqui que o robô irá conversar com você!\n')
 			msg_inicio = 1
 
 		if event in ('Encerrar entradas'):
@@ -384,13 +435,13 @@ def TelaEntradas(api, email, senha):
 
 		if event == 'Iniciar Robô':
 			if inicio == 0:
-				stop_win = float(values[1])
-				stop_loss = float(values[2])
+				stop_win = float(values[0])
+				stop_loss = float(values[1])
 
 				lista = carregar_sinais()
 				inicio = 1
 				print('Lista de sinais carregada!')
-				print('A partir de agora os sinais da lista e as configurações de stop win/loss não podem ser alterados, caso queira alterá-los, clique no botão Cancelar Entradas.\n')
+				print('A partir de agora os sinais da lista e as configurações de stop win/loss, valor de entradas e martingale não podem ser alterados, caso queira alterá-los, clique no botão Cancelar Entradas.\n')
 
 				if stop_loss > 0 and stop_win > 0:
 					modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_win, email, senha)
@@ -400,19 +451,19 @@ def TelaEntradas(api, email, senha):
 
 
 				elif stop_loss > 0 and stop_win == 0:
-					modo_stopLoss(api, janela2, inicio, lista, em_andamento)
+					modo_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, email, senha)
 					inicio = 0
 					lista = dict()
 					em_andamento = []
 
 				elif stop_loss == 0 and stop_win > 0:
-					modo_stopWin(api, janela2, inicio, lista, em_andamento)
+					modo_stopWin(api, janela2, inicio, lista, em_andamento, stop_win, email, senha)
 					inicio = 0
 					lista = dict()
 					em_andamento = []
 				
 				else:
-					modo_semStops(api, janela2, inicio, lista, em_andamento)
+					modo_semStops(janela2, inicio, lista, em_andamento, email, senha)
 					inicio = 0
 					lista = dict()
 					em_andamento = []
