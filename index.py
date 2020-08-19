@@ -79,7 +79,7 @@ def capturarVelas_realTime(par, tempo_vela):
 		time.sleep(1)
 	API.stop_candles_stream(par, tempo_vela)
 
-def payout(API, par, tipo, timeframe = 1): #tipo = DIGITAL/BINARY; timeframe = tempo de expiração da vela
+def payout(API, par, tipo, timeframe): #tipo = DIGITAL/BINARY; timeframe = tempo de expiração da vela
 	
 	if tipo == 'binary':
 		a = API.get_all_profit()
@@ -145,7 +145,15 @@ def historico():
 		print('LUCRO: '+str(x['close_profit'] if x['close_profit'] == 0 else round(x['close_profit']-x['invest'], 2) ) + ' | INICIO OP: '+str(timestamp_converter(x['open_time'] / 1000))+' / FIM OP: '+str(timestamp_converter(x['close_time'] / 1000)))
 		print('\n')
 
-def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha):
+def martingale(valor, payout, perca):
+	lucro_esperado = valor * payout
+
+	while True:
+		if round(valor * payout, 2) > round(abs(perca) + lucro_esperado, 2):
+			return round(valor, 2)
+		valor += 0.05
+
+def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha, mgales):
 	#timeframe = tempo em min, valor = valor da entrada, par = moedas tipo 'EURUSD', tipo = put ou call
 
 	#digital
@@ -154,12 +162,11 @@ def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha):
 	API.connect()
 
 	global lucro_total
-	thread_data = threading.local()
 
 	_,id = API.buy_digital_spot(par, valor, tipo, timeframe)
 	
 	if isinstance(id, int):
-		print('Fez entrada -> Hora: ' + hora + ', Moeda: ' + par + ', Direção: ' + tipo)
+		print('Fez entrada -> Hora: ' + hora + ', Moeda: ' + par + ', Direção: ' + tipo + '\n')
 		while True:
 			status, lucro = API.check_win_digital_v2(id)
 
@@ -169,11 +176,20 @@ def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha):
 					lucro_total += lucro
 					
 				else:
-					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = -' + str(valor) + '\n')
+					perca = valor
+					print('Operação das '+ hora + ' na moeda ' + par + '\n RESULTADO: LOSS / LUCRO = -' + str(perca) + '\n')
 					lucro_total -= valor
+					if int(mgales) > 0:
+						Payout = payout(API, par, 'digital', timeframe) / 100
+						valor = martingale(valor, Payout, perca)
+						print('Entrando com martingale para a operação das '+ hora + ' na moeda ' + par)
+						int(mgales) -= 1
+						fazer_entrada(valor, par, tipo, timeframe, hora, email, senha, mgales)
+						return
+
 				print('LUCRO TOTAL: ' + str(lucro_total) + '\n')
 				return
-		
+
 
 	#binaria
 	status, id = API.buy(valor, par, tipo, timeframe)
@@ -246,8 +262,10 @@ def modo_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, email, s
 
 		#time.sleep(1)
 
-def modo_stopWin(api, janela2, inicio, lista, em_andamento, stop_win, email, senha):
-	print('ATENÇÃO!\nModo stop win ATIVADO! \nModo stop loss DESATIVADO!\n')
+def modo_stopWin(api, janela2, inicio, lista, em_andamento, stop_win, email, senha, mgales):
+	print('ATENÇÃO!\nModo stop win ATIVADO! \nModo stop loss DESATIVADO!')
+	print('Seu stop win é de: ', stop_win)
+	print('O robo está configurada para entrar com até ' + mgales + ' gales\n')
 	global lucro_total
 
 	while True:
@@ -263,13 +281,13 @@ def modo_stopWin(api, janela2, inicio, lista, em_andamento, stop_win, email, sen
 		for sinal in lista:
 			dados = sinal.split(',')
 			d = datetime.strptime(dados[0], '%H:%M:%S') + timedelta(seconds=-5)
-			print(d.strftime('%H:%M:%S'))
-			if d == datetime.now().strftime('%H:%M:%S'):
+
+			if d.strftime('%H:%M:%S') == datetime.now().strftime('%H:%M:%S'):
 
 				if lucro_total < stop_win:
 					#em_andamento.append(dados[0])
 					lista.remove(sinal)
-					threading.Thread(target=fazer_entrada, args=(2, dados[1], dados[2], 1, dados[0], email, senha, )).start()
+					threading.Thread(target=fazer_entrada, args=(2, dados[1], dados[2], 1, dados[0], email, senha, mgales, )).start()
 
 				else:
 					print('Stop win atingido.')
@@ -394,7 +412,7 @@ def TelaEntradas(api, email, senha):
 		[sg.Text('Número de Martin Gales: ')],
 		[sg.Input('0')],
 		[sg.Button('Iniciar Robô'), sg.Button('Encerrar entradas')], #ao cancelar entradas o programa é fechado
-		#[sg.Output(size=(115,10))],
+		[sg.Output(size=(115,10))],
 	]
 	janela2 = sg.Window('Tela de Operações').layout(layout2)
 	event, values = janela2.Read(timeout=10)
@@ -440,6 +458,7 @@ def TelaEntradas(api, email, senha):
 			if inicio == 0:
 				stop_win = float(values[0])
 				stop_loss = float(values[1])
+				mgales = values[3]
 
 				lista = carregar_sinais()
 				inicio = 1
@@ -447,26 +466,26 @@ def TelaEntradas(api, email, senha):
 				print('A partir de agora os sinais da lista e as configurações de stop win/loss, valor de entradas e martingale não podem ser alterados, caso queira alterá-los, clique no botão Cancelar Entradas.\n')
 
 				if stop_loss > 0 and stop_win > 0:
-					modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_win, email, senha)
+					modo_stopWin_stopLoss(janela2, inicio, lista, em_andamento, stop_loss, stop_win, email, senha, mgales)
 					inicio = 0
 					lista = dict()
 					em_andamento = []
 
 
 				elif stop_loss > 0 and stop_win == 0:
-					modo_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, email, senha)
+					modo_stopLoss(api, janela2, inicio, lista, em_andamento, stop_loss, email, senha, mgales)
 					inicio = 0
 					lista = dict()
 					em_andamento = []
 
 				elif stop_loss == 0 and stop_win > 0:
-					modo_stopWin(api, janela2, inicio, lista, em_andamento, stop_win, email, senha)
+					modo_stopWin(api, janela2, inicio, lista, em_andamento, stop_win, email, senha, mgales)
 					inicio = 0
 					lista = dict()
 					em_andamento = []
 				
 				else:
-					modo_semStops(janela2, inicio, lista, em_andamento, email, senha)
+					modo_semStops(janela2, inicio, lista, em_andamento, email, senha, mgales)
 					inicio = 0
 					lista = dict()
 					em_andamento = []
