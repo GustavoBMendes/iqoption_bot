@@ -1,0 +1,42 @@
+ATENÇÃO, IMPORTANTE LER TODOS OS SEGUINTES PASSOS ANTES DE INICIAR SEU ROBÔ:
+
+Link download: www.mediafire.com/file/39p6200ec1qq9ms/Robo_IQOPTION.rar/file
+Para iniciar o robô, entre na pasta 'dist' -> 'index' -> execute o arquivo 'index.exe'
+Voce pode criar um atalho do executável clicando com o botão direito no arquivo e em seguida selecionando a opção 'Criar Atalho', copie o atalho para esta pasta.
+
+--> TIPO DE CONTA:
+Sempre conferir o tipo de conta em que o robô está configurado para operar, ele mostra em qual tipo irá operar (REAL = conta real ou PRACTICE = conta demo)
+
+--> IMPORTAR SINAIS:
+Para importar os sinais, é necessário configurar o arquivo "sinais"
+Este arquivo se encontra na mesma pasta de inicialização do robô.
+Ele deve ser configurado da seguinte forma:
+Um sinal em cada linha do arquivo, as informações devem estar separadas por vírgula "," e não podem conter espaço entre elas.
+As informações devem ser escritas da seguinte forma e na seguinte ordem:
+
+Horário,par de moedas,call ou put,tempo de expiração
+
+Exemplo:
+
+12:16:00,EURUSD,call,1
+12:30:00,USDJPY,call,5
+
+O arquivo "exemplo" demonstra exatamente como a lista deve ser configurada, 
+você pode copiar os sinais deste arquivo e colar no arquivo "sinais", apenas alterar e acrescentar os seus sinais.
+
+--> STOP WIN/ STOP LOSS:
+O robô pode ser configurado para trabalhar em 4 modos: Com stop win e stop loss, apenas stop win, apenas stop loss, ou sem os dois stops.
+Caso queira desabilitar uma dessas funções, deixe o valor como 0 (zero).
+
+--> VALOR DAS ENTRADAS:
+O valor em dinheiro em que o robô irá usar como entrada é o mesmo para todos os sinais da sua lista, não esqueça de colocar o valor no campo "Valor das entradas"
+
+--> MARTINGALE:
+O robô é capaz de realizar martingale em seus sinais em caso de loss.
+Caso não queira martingale basta deixar o campo com valor 0 (zero).
+CUIDADO, pois o valor contido no campo "Número de Martin gales" irá determinar quantas vezes o robô irá entrar com gale, um número muito alto pode ser PERIGOSO.
+
+-->INICIAR:
+Com todos os campos preenchidos adequadamente e sua lista de sinais configurada no arquivo "sinais", o robô irá começar a trabalhar após o clique no botão "Iniciar Robô"
+
+Boas operações! =)

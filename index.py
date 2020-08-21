@@ -270,7 +270,7 @@ def fazer_entrada(valor, par, tipo, timeframe, hora, email, senha, mgales):
 	print('Ativo ' + par + ' não disponível no modo digital e binário\n')	
 
 def carregar_sinais():
-	arquivo = open('sinais.txt', encoding='UTF-8')
+	arquivo = open('../../sinais.txt', encoding='UTF-8')
 	lista = arquivo.read()
 	arquivo.close
 	
@@ -474,7 +474,7 @@ def TelaEntradas(api, email, senha):
 		[sg.Text('Número de Martin Gales: ')],
 		[sg.Input('0')],
 		[sg.Button('Iniciar Robô'), sg.Button('Encerrar entradas')], #ao cancelar entradas o programa é fechado
-		[sg.Output(size=(115,15))],
+		[sg.Output(size=(115,10))],
 	]
 	janela2 = sg.Window('Tela de Operações').layout(layout2)
 	event, values = janela2.Read(timeout=10)

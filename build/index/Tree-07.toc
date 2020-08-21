@@ -1,0 +1,7 @@
+('c:\\users\\mende\\appdata\\local\\programs\\python\\python38\\lib\\site-packages\\certifi-2020.6.20-py3.8.egg',
+ None,
+ {'*.pyd', '*.pyc', 'EGG-INFO', '*.py', '*.pyw', '*.cp38-win_amd64.pyd'},
+ 'DATA',
+ [('certifi\\cacert.pem',
+   'c:\\users\\mende\\appdata\\local\\programs\\python\\python38\\lib\\site-packages\\certifi-2020.6.20-py3.8.egg\\certifi\\cacert.pem',
+   'DATA')])

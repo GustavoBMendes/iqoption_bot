@@ -1,0 +1,13 @@
+('c:\\users\\mende\\appdata\\local\\programs\\python\\python38\\lib\\site-packages\\websocket_client-0.56.0-py3.8.egg',
+ None,
+ {'EGG-INFO', '*.cp38-win_amd64.pyd', '*.pyd', '*.pyw', '*.py', '*.pyc'},
+ 'DATA',
+ [('websocket\\cacert.pem',
+   'c:\\users\\mende\\appdata\\local\\programs\\python\\python38\\lib\\site-packages\\websocket_client-0.56.0-py3.8.egg\\websocket\\cacert.pem',
+   'DATA'),
+  ('websocket\\tests\\data\\header01.txt',
+   'c:\\users\\mende\\appdata\\local\\programs\\python\\python38\\lib\\site-packages\\websocket_client-0.56.0-py3.8.egg\\websocket\\tests\\data\\header01.txt',
+   'DATA'),
+  ('websocket\\tests\\data\\header02.txt',
+   'c:\\users\\mende\\appdata\\local\\programs\\python\\python38\\lib\\site-packages\\websocket_client-0.56.0-py3.8.egg\\websocket\\tests\\data\\header02.txt',
+   'DATA')])
